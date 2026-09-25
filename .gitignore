@@ -1,0 +1,39 @@
+cmake-build-*/
+build/
+out/
+
+# CMake 自动生成缓存/中间文件
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+CMakeLists.txt.user
+compile_commands.json
+
+# ========= 编译产物（STM32 裸机固件）=========
+*.elf
+*.bin
+*.hex
+*.axf
+*.map
+*.o
+*.obj
+*.d
+*.a
+*.lib
+
+# ========= CLion IDE 配置缓存（JetBrains）=========
+.idea/
+# 可选：如果你想团队共享项目配置，可以保留 !.idea/*.xml，个人工程直接全忽略即可
+
+# ========= Windows系统垃圾文件 =========
+Thumbs.db
+*.tmp
+*.bak
+*.log
+
+# ========= STM32CubeMX 相关（如果你用.ioc）=========
+*.ioc.bak
+.mxproject
