@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
 #include "dma.h"
 #include "tim.h"
 #include "usart.h"
@@ -57,7 +58,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void PA5_ADC_AIN_Init(void);
 /* USER CODE END 0 */
 
 /**
@@ -92,9 +93,15 @@ int main(void)
   MX_DMA_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
-  MX_USART2_Init();
+  MX_USART2_UART_Init();
+  MX_ADC1_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-
+  RGB_Srand_Init();
+  PA5_ADC_AIN_Init();
+  WS2812_Init();
+  Uart_Init();
+  HAL_UARTEx_ReceiveToIdle_IT(uart_slave,TempBuffer,100);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -102,7 +109,12 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    rgbStart();
+    if(TempBuffer_Finish_Flag){
+      TempBuffer_Finish_Flag = 0;
+      BufMove(TempBuffer,TempBufferSize);
+    }
+    ReceiveBufferParse(setMode,setPosition);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -116,6 +128,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -145,10 +158,27 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /* USER CODE BEGIN 4 */
+void PA5_ADC_AIN_Init(void)
+{
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;   // 模拟模式
+  GPIO_InitStruct.Pull = GPIO_NOPULL;        // 无上拉无下拉
+
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
 /* USER CODE END 4 */
 
 /**

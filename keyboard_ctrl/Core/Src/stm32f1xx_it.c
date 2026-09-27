@@ -22,6 +22,10 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usbd_customhid.h"
+#include "usbd_def.h"
+#include "keyboard.h"
+#include "uart_master.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,6 +60,9 @@
 
 /* External variables --------------------------------------------------------*/
 extern PCD_HandleTypeDef hpcd_USB_FS;
+extern USBD_HandleTypeDef hUsbDeviceFS;
+extern TIM_HandleTypeDef htim4;
+extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -301,6 +308,34 @@ void EXTI9_5_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM4 global interrupt.
+  */
+void TIM4_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM4_IRQn 0 */
+
+  /* USER CODE END TIM4_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim4);
+  /* USER CODE BEGIN TIM4_IRQn 1 */
+
+  /* USER CODE END TIM4_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART1 global interrupt.
+  */
+void USART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART1_IRQn 0 */
+
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  /* USER CODE END USART1_IRQn 1 */
+}
+
+/**
   * @brief This function handles EXTI line[15:10] interrupts.
   */
 void EXTI15_10_IRQHandler(void)
@@ -320,5 +355,30 @@ void EXTI15_10_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+  if(KeyboardState == KEYBOARD_IDLE){
+    KeyboardState = KEYBOARD_READY_SCAN;
+  }
+  if(KeyboardState == KEYBOARD_SCAN_RUNNING){
+    uint8_t col = getKey(GPIO_Pin);
+    //去除重复的中断
+    if(!MarkList_IsExist(type_manage.mark_list,col)){
+      MarkList_Add(type_manage.mark_list,col);
+      RewindBuf_Write(type_manage.rewindbuf,col);
+    }
+  }
+}
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+  //usb发送报文
+  if(htim == keyboard_tim_1ms){
+    USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS,type_manage.report_manage->usb_report,NKRO_REPORT_BUFFER_SIZE);
+  }
+}
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
+  if(huart == uart_master){
+    Receive_Finish_Flag = 1;
+    ReceiveBufferSize = Size;
+    HAL_UARTEx_ReceiveToIdle_IT(&huart1,ReceiveBuffer,100);
+  }
+}
 /* USER CODE END 1 */

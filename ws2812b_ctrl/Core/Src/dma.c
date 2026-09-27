@@ -32,12 +32,12 @@
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
-DMA_HandleTypeDef hdma_memtomem_dma1_channel2;
+DMA_HandleTypeDef hdma_memtomem_dma1_channel4;
 
 /**
   * Enable DMA controller clock
   * Configure DMA for memory to memory transfers
-  *   hdma_memtomem_dma1_channel2
+  *   hdma_memtomem_dma1_channel4
   */
 void MX_DMA_Init(void)
 {
@@ -45,16 +45,16 @@ void MX_DMA_Init(void)
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
 
-  /* Configure DMA request hdma_memtomem_dma1_channel2 on DMA1_Channel2 */
-  hdma_memtomem_dma1_channel2.Instance = DMA1_Channel2;
-  hdma_memtomem_dma1_channel2.Init.Direction = DMA_MEMORY_TO_MEMORY;
-  hdma_memtomem_dma1_channel2.Init.PeriphInc = DMA_PINC_ENABLE;
-  hdma_memtomem_dma1_channel2.Init.MemInc = DMA_MINC_ENABLE;
-  hdma_memtomem_dma1_channel2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-  hdma_memtomem_dma1_channel2.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-  hdma_memtomem_dma1_channel2.Init.Mode = DMA_NORMAL;
-  hdma_memtomem_dma1_channel2.Init.Priority = DMA_PRIORITY_MEDIUM;
-  if (HAL_DMA_Init(&hdma_memtomem_dma1_channel2) != HAL_OK)
+  /* Configure DMA request hdma_memtomem_dma1_channel4 on DMA1_Channel4 */
+  hdma_memtomem_dma1_channel4.Instance = DMA1_Channel4;
+  hdma_memtomem_dma1_channel4.Init.Direction = DMA_MEMORY_TO_MEMORY;
+  hdma_memtomem_dma1_channel4.Init.PeriphInc = DMA_PINC_ENABLE;
+  hdma_memtomem_dma1_channel4.Init.MemInc = DMA_MINC_ENABLE;
+  hdma_memtomem_dma1_channel4.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+  hdma_memtomem_dma1_channel4.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+  hdma_memtomem_dma1_channel4.Init.Mode = DMA_NORMAL;
+  hdma_memtomem_dma1_channel4.Init.Priority = DMA_PRIORITY_MEDIUM;
+  if (HAL_DMA_Init(&hdma_memtomem_dma1_channel4) != HAL_OK)
   {
     Error_Handler();
   }
@@ -63,9 +63,6 @@ void MX_DMA_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-  /* DMA1_Channel2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
   /* DMA1_Channel3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
