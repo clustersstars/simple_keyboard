@@ -25,7 +25,7 @@
 #include "usbd_customhid.h"
 #include "usbd_def.h"
 #include "keyboard.h"
-#include "uart_master.h"
+#include "uart_proto.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -375,10 +375,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
   }
 }
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
-  if(huart == uart_master){
-    Receive_Finish_Flag = 1;
-    ReceiveBufferSize = Size;
-    HAL_UARTEx_ReceiveToIdle_IT(&huart1,ReceiveBuffer,100);
+  if(huart == uart_manager.uart){
+    uart_manager.RE = 1;
+    uart_manager.temp_buffer_len = Size;
+    HAL_UARTEx_ReceiveToIdle_IT(uart_manager.uart,uart_manager.temp_buffer,100);
   }
 }
+
 /* USER CODE END 1 */

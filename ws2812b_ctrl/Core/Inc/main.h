@@ -31,8 +31,6 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "uart_slave.h"
-#include "WS2812B.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

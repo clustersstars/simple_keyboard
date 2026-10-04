@@ -1,14 +1,13 @@
 #include "keyboard.h"
 
 #include "main.h"
-#include "uart_master.h"
-// #include "usbd_hid.h"
+#include "tool_lib.h"
+#include "uart_proto.h"
 //extern引用
 extern TIM_HandleTypeDef htim4;
-// extern TIM_HandleTypeDef htim6;
-// extern TIM_HandleTypeDef htim7;
+
 //常量声明
-const uint8_t keyMap[KEYBOARDROW][KEYBOARDCOL] = {
+static const uint8_t keyMap[KEYBOARDROW][KEYBOARDCOL] = {
   //ROW1
   {KB_ESC,0x01,KB_F1,KB_F2,KB_F3,KB_F4,0x01,KB_F5,KB_F6,KB_F7,KB_F8,KB_F9,KB_F10,KB_F11,KB_F12,KB_DELETE},
   //ROW2
@@ -22,7 +21,7 @@ const uint8_t keyMap[KEYBOARDROW][KEYBOARDCOL] = {
   //ROW6
   {Left_Ctrl,Left_GUI,0x01,Left_Alt,0x01,0x01,KB_SPACE,0x01,0x01,0x01,Right_Alt,Right_Ctrl,Fn,KB_LARROW,KB_DARROW,KB_RARROW},
 };
-const uint8_t keyPosMap[KEYBOARDROW][KEYBOARDCOL] = {
+static const uint8_t keyPosMap[KEYBOARDROW][KEYBOARDCOL] = {
   //ROW1
   {COL0,0,COL1,COL2,COL3,COL4,0,COL5,COL6,COL7,COL8,COL9,COL10,COL11,COL12,COL13},
   //ROW2
@@ -39,7 +38,7 @@ const uint8_t keyPosMap[KEYBOARDROW][KEYBOARDCOL] = {
 
 #ifdef KEYBOARD_RGB
 
-const uint8_t rgb_commands[13] = {
+static const uint8_t rgb_commands[13] = {
   RGB_COLOR_BLUE,
   RGB_COLOR_CYAN,
   RGB_COLOR_ORANGE,
@@ -55,7 +54,7 @@ const uint8_t rgb_commands[13] = {
   RGB_SWITCH_CLOSE
 };
 
-const RGB_CommandTypeDef rgb_types[13] = {
+static const RGB_CommandTypeDef rgb_types[13] = {
   COLOR_TYPE,
   COLOR_TYPE,
   COLOR_TYPE,
@@ -99,22 +98,26 @@ TIM_HandleTypeDef *keyboard_tim_1ms = &htim4;
 
 static bool BufferManage_Init(TypeManage* type_manage,BufferManage *buffer_manage);
 static bool ReportManage_Init(TypeManage* type_manage,ReportManage *report_manage);
-#ifdef KEYBOARD_RGB
 
+#ifdef KEYBOARD_RGB
 static bool ModeManage_Init(TypeManage* type_manage,ModeManage* mode_manage);
 static bool PositionManage_Init(TypeManage* type_manage,PosManage* position_manage);
-static void addPosList(uint8_t position);
-static void clearPosList(PosManage* position_manage);
+static void PosList_Push(uint8_t position);
+static void PosList_Clear(PosManage* position_manage);
 static int16_t verifyCommand(uint8_t command);
-
+static void pushCommandToTempMode(uint8_t command);
+static void popCommandToTempMode(RGB_CommandTypeDef command_type);
+static void pushCommandToWaitResponseMode(RGB_CommandTypeDef command_type,uint8_t command);
+static void popCommandToWaitResponseMode(RGB_CommandTypeDef command_type);
 #endif
+
 static void scanKeyboardRow(void);//行扫描
 static bool checkCompare(BufferManage* buffer_manage);
 static void updateReport(TypeManage* type_manage);
 static void push(TypeManage* type_manage,uint8_t key,uint8_t position);
 static void clear(TypeManage* type_manage);
-
 static void clearBuffer(BufferManage* buffer_manage);
+
 
 //function keyboard
 void KeyboardInit(void){
@@ -174,23 +177,14 @@ bool ModeManage_Init(TypeManage* type_manage,ModeManage* mode_manage){
     return false;
   }
   //初始化rgb_switch
-  mode_manage->rgb_mode[0].rgb_command = RGB_SWITCH_CLOSE;
-  mode_manage->rgb_mode[0].effect_state = EFFECT;
-  mode_manage->rgb_mode[0].time = 0;
-  mode_manage->rgb_mode[0].repeat_transmit_count = 0;
+  mode_manage->rgb_mode[0] = RGB_SWITCH_CLOSE;
   //初始化rgb_color
-  mode_manage->rgb_mode[1].rgb_command = RGB_COLOR_ORANGE;
-  mode_manage->rgb_mode[1].effect_state = EFFECT;
-  mode_manage->rgb_mode[1].time = 0;
-  mode_manage->rgb_mode[1].repeat_transmit_count = 0;
+  mode_manage->rgb_mode[1] = RGB_COLOR_ORANGE;
   //初始化rgb_mode
-  mode_manage->rgb_mode[2].rgb_command = RGB_MODE_STATIC;
-  mode_manage->rgb_mode[2].effect_state = EFFECT;
-  mode_manage->rgb_mode[2].time = 0;
+  mode_manage->rgb_mode[2] = RGB_MODE_STATIC;
   //初始化待处理命令数量
   mode_manage->pending_quantity = 0;
   //初始化上次命令
-  mode_manage->last_time_command = 0;
   type_manage->mode_manage = mode_manage;
   return true;
 }
@@ -323,7 +317,7 @@ void push(TypeManage* type_manage,uint8_t key,uint8_t position){
   type_manage->buffer_manage->nkro_buffer_manage.push(&type_manage->buffer_manage->nkro_buffer_manage,key);
   #ifdef KEYBOARD_RGB
   //添加按键位置入栈
-  addPosList(position);
+  PosList_Push(position);
   #endif
 }
 
@@ -332,14 +326,15 @@ void clear(TypeManage* type_manage){
   MarkList_MarkClear(type_manage->mark_list);
   clearBuffer(type_manage->buffer_manage);
   #ifdef KEYBOARD_RGB
-  clearPosList(type_manage->position_manage);
+  PosList_Clear(type_manage->position_manage);
   #endif
 }
 
 void updateReport(TypeManage* type_manage){
   if(type_manage->buffer_manage->function_key_flag && type_manage->buffer_manage->function_key != 0){
     #ifdef KEYBOARD_RGB
-    setMode(type_manage->buffer_manage->function_key);
+    // setMode(type_manage->buffer_manage->function_key);
+    pushCommandToTempMode(type_manage->buffer_manage->function_key);
     #endif
     return;
   }
@@ -374,7 +369,7 @@ bool RewindBuf_Init(TypeManage *type_manage,RewindBuffer_InitTypeDef *rewindbuf)
   return true;
 }
 
-bool RewindBuf_Write(struct RewindBuffer_InitTypeDef *rewindbuf,uint8_t elem){
+bool RewindBuf_Write(RewindBuffer_InitTypeDef *rewindbuf,uint8_t elem){
   if(RewindBuf_Is_Full(rewindbuf)){
     return false;
   }
@@ -383,23 +378,23 @@ bool RewindBuf_Write(struct RewindBuffer_InitTypeDef *rewindbuf,uint8_t elem){
   return true;
 }
 
-int RewindBuf_Read(struct RewindBuffer_InitTypeDef *rewindbuf){
+int RewindBuf_Read(RewindBuffer_InitTypeDef *rewindbuf){
   if(rewindbuf->read_pointer > rewindbuf->write_pointer){
     return -1;
   }
   return rewindbuf->buffer[rewindbuf->read_pointer++];
 }
 
-void RewindBuf_Rewind(struct RewindBuffer_InitTypeDef *rewindbuf){
+void RewindBuf_Rewind(RewindBuffer_InitTypeDef *rewindbuf){
   rewindbuf->read_pointer = 0;
 }
 
-void RewindBuf_Clear(struct RewindBuffer_InitTypeDef *rewindbuf){
+void RewindBuf_Clear(RewindBuffer_InitTypeDef *rewindbuf){
   rewindbuf->read_pointer = 0;
   rewindbuf->write_pointer = 0;
 }
 
-bool RewindBuf_Is_Full(struct RewindBuffer_InitTypeDef *rewindbuf){
+bool RewindBuf_Is_Full(RewindBuffer_InitTypeDef *rewindbuf){
   if(rewindbuf->write_pointer < rewindbuf->buffer_size){
     return false;
   }
@@ -412,41 +407,42 @@ bool RewindBuf_Is_Empty(struct RewindBuffer_InitTypeDef *rewindbuf){
   }
   return true;
 }
+
 #ifdef KEYBOARD_RGB
-void setMode(uint8_t command){
+void pushCommandToTempMode(uint8_t command) {
   int type_index = 0;
-  //判断命令是否设置重复
-  if(command == type_manage.mode_manage->last_time_command){
-    return;
-  }
-  //判断命令是否正确
   if((type_index = verifyCommand(command)) == -1){
     return;
   }
-  //设置命令
-  if(type_manage.mode_manage->rgb_mode[rgb_types[type_index]].rgb_command == command){
+  if (type_manage.mode_manage->temp_mode[rgb_types[type_index]] == command) {
+    //该指令已在temp_mode中
     return;
   }
-  type_manage.mode_manage->rgb_mode[rgb_types[type_index]].rgb_command = command;
-  type_manage.mode_manage->rgb_mode[rgb_types[type_index]].effect_state = NO_EFFECT;
-  type_manage.mode_manage->rgb_mode[rgb_types[type_index]].repeat_transmit_count = 0;
-  type_manage.mode_manage->rgb_mode[rgb_types[type_index]].time = HAL_GetTick();
-  type_manage.mode_manage->last_time_command = command;
+  if (type_manage.mode_manage->rgb_mode[rgb_types[type_index]] == command) {
+    //该指令已激活
+    return;
+  }
+  type_manage.mode_manage->temp_mode[rgb_types[type_index]] = command;
   type_manage.mode_manage->pending_quantity++;
 }
 
-void resetMode(uint8_t command){
-  int type_index = 0;
-  if((type_index = verifyCommand(command)) == -1){
-    return;
-  }
-  type_manage.mode_manage->rgb_mode[rgb_types[type_index]].effect_state = EFFECT;
-  if(type_manage.mode_manage->pending_quantity > 0){
-    type_manage.mode_manage->pending_quantity--;
-  }
+void popCommandToTempMode(RGB_CommandTypeDef command_type) {
+  type_manage.mode_manage->temp_mode[command_type] = 0;
 }
 
-void addPosList(uint8_t position){
+void pushCommandToWaitResponseMode(RGB_CommandTypeDef command_type,uint8_t command) {
+  type_manage.mode_manage->wait_response_mode[command_type].rgb_command = command;
+  type_manage.mode_manage->wait_response_mode[command_type].repeat_transmit_count = 0;
+  type_manage.mode_manage->wait_response_mode[command_type].time = HAL_GetTick();
+}
+
+void popCommandToWaitResponseMode(RGB_CommandTypeDef command_type) {
+  type_manage.mode_manage->wait_response_mode[command_type].rgb_command = 0;
+  type_manage.mode_manage->wait_response_mode[command_type].repeat_transmit_count = 0;
+  type_manage.mode_manage->wait_response_mode[command_type].time = 0;
+}
+
+void PosList_Push(uint8_t position){
   if(type_manage.position_manage->pos_list.pos_top >= K_POSITION_LIST_SIZE){
     return;
   }
@@ -454,32 +450,12 @@ void addPosList(uint8_t position){
   type_manage.position_manage->pos_list.pos_top++;
 }
 
-void clearPosList(PosManage* position_manage){
+void PosList_Clear(PosManage *position_manage){
   position_manage->pos_list.pos_top = 0;
   memset((uint8_t*)position_manage->pos_list.list,0,sizeof(position_manage->pos_list));
 }
 
-void transmitCommand(void){
-  if(type_manage.mode_manage->pending_quantity > 0){
-    for(uint8_t i=0;i<3;i++){
-      if(type_manage.mode_manage->rgb_mode[i].effect_state == NO_EFFECT){
-        //发送命令
-        send(type_manage.mode_manage->rgb_mode[i].rgb_command,1);
-        type_manage.mode_manage->rgb_mode[i].effect_state = PENDING_EFFECT;
-      }
-    }
-  }
-}
-
-void transmitPosition(void){
-  if(type_manage.position_manage->ring_structure.list_num > 0){
-    for(uint8_t i=0;i<type_manage.position_manage->ring_structure.list_num;i++){
-      send(RingList_Pop(&type_manage.position_manage->ring_structure),0);
-    }
-  }
-}
-
-//如果找到返回索引，没找到返回-1
+//验证指令是否存在
 int16_t verifyCommand(uint8_t command){
   int16_t left = 0;
   int16_t right = sizeof(rgb_commands)/sizeof(uint8_t) - 1;
@@ -492,11 +468,73 @@ int16_t verifyCommand(uint8_t command){
             // 中间值 < 目标值，去右半部分查找
             left = mid + 1;
         } else {
-            // 中间值 > 目标值，去左半部分查找
+            // 中间值 > 目标值，去左半部分查
             right = mid - 1;
         }
     }
     // 循环结束未找到  
     return -1;
+}
+
+void transmitCommand(void){
+  if(type_manage.mode_manage->pending_quantity > 0){
+    for(uint8_t i=0;i<3;i++){
+      if(type_manage.mode_manage->temp_mode[i] != 0){
+        //发送命令
+        UART_Data_Transfer(DATA_TYPE_COMMAND,&type_manage.mode_manage->temp_mode[i],1);
+        //
+        pushCommandToWaitResponseMode(i,type_manage.mode_manage->temp_mode[i]);
+        //
+        popCommandToTempMode(i);
+      }
+    }
+    type_manage.mode_manage->pending_quantity--;
+  }
+}
+
+void transmitPosition(void){
+  uint8_t data = 0;
+  while(!RingList_IsEmpty(&type_manage.position_manage->ring_structure)) {
+    //取数据
+    data = (uint8_t)RingList_Pop(&type_manage.position_manage->ring_structure);
+    //更新temp_read_pointer;
+    RingList_Update_TempReadPointer(&type_manage.position_manage->ring_structure);
+    UART_Data_Transfer(DATA_TYPE_POSITION,&data,1);
+  }
+}
+
+void commandTimeoutHandler(void) {
+  for(uint8_t i=0;i<3;i++) {
+    if (type_manage.mode_manage->wait_response_mode[i].rgb_command != 0 && HAL_GetTick() - type_manage.mode_manage->wait_response_mode[i].time > COMMAND_TIMEOUT) {
+      if (type_manage.mode_manage->wait_response_mode[i].repeat_transmit_count <= COMMAND_SEND_REPEAT_COUNT-1) {
+        //重发
+        UART_Data_Transfer(DATA_TYPE_COMMAND,&type_manage.mode_manage->wait_response_mode[i].rgb_command,1);
+        type_manage.mode_manage->wait_response_mode[i].time = HAL_GetTick();
+        type_manage.mode_manage->wait_response_mode[i].repeat_transmit_count++;
+      }else {
+        //清除
+        popCommandToWaitResponseMode(i);
+        type_manage.mode_manage->wait_response_mode[i].repeat_transmit_count = 0;
+      }
+    }
+  }
+}
+
+void Command_HandlingCallback(uint8_t command) {
+  //处理指令
+  int type_index = 0;
+  if((type_index = verifyCommand(command)) == -1){
+    return;
+  }
+  if (type_manage.mode_manage->wait_response_mode[rgb_types[type_index]].rgb_command == command) {
+    //清除wait_response_mode[type_index]
+    popCommandToWaitResponseMode(rgb_types[type_index]);
+    //
+    type_manage.mode_manage->rgb_mode[rgb_types[type_index]] = command;
+  }
+}
+
+void Position_HandlingCallback(uint8_t position) {
+  //处理位置
 }
 #endif

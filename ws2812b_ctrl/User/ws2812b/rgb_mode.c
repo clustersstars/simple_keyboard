@@ -66,8 +66,7 @@ ClipTypeDef* Ring_Peek(CustomClipListInitDef* list){
         return temp;
     }
     temp = list->clip_list[list->list_pointer];
-    list->list_pointer++;
-    list->list_pointer %= list->list_num;
+    list->list_pointer = (list->list_pointer+1)%list->list_num;
     return temp;
 } 
 void Ring_Clear(CustomClipListInitDef* list){

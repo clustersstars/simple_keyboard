@@ -1,7 +1,7 @@
 #include "WS2812B.h"
 #include "random.h"
 #include "stm32f1xx_hal.h"
-#include "uart_slave.h"
+#include "uart_proto.h"
 //extern
 extern DMA_HandleTypeDef hdma_memtomem_dma1_channel4;
 extern TIM_HandleTypeDef htim2;
@@ -69,7 +69,7 @@ static inline void setRunState(RGB_RunState RunState);
 
 //初始化函数
 void WS2812_Init(void){
-    ws_rgb.state_ctrl.rgb_state = RGB_STATE_UNENABLE; 
+    ws_rgb.state_ctrl.rgb_state = RGB_STATE_UNENABLE;
     ws_rgb.state_ctrl.pwm_state = PWM_READY;
     ws_rgb.RGB_ACTIVE_ENABLE_TIME = 0;
     
@@ -115,7 +115,7 @@ void headIndexListInit(void){
 //函数(function)
 //运行rgb
 void rgbStart(void){
-    if(!(ws_rgb.state_ctrl.rgb_state == RGB_STATE_ENABLE || ws_rgb.state_ctrl.rgb_state == RGB_STATE_READY_UNENABLE)){
+     if(!(ws_rgb.state_ctrl.rgb_state == RGB_STATE_ENABLE || ws_rgb.state_ctrl.rgb_state == RGB_STATE_READY_UNENABLE)){
         return;
     }
     //关闭灯光
@@ -197,9 +197,7 @@ void rgbRun(void){
                 ws_rgb.state_ctrl.run_state = SEND_COLOR_PWM_FINISH;
             }
         }break;
-        case SEND_COLOR_PWM_FINISH:{
-            ws_rgb.state_ctrl.run_state = COLOR_DISPLAY_DELAY_START;
-        }break;
+        case SEND_COLOR_PWM_FINISH:{ws_rgb.state_ctrl.run_state = COLOR_DISPLAY_DELAY_START;}
         case COLOR_DISPLAY_DELAY_START:{
             if(RGB_Delay() == OK){
                 ws_rgb.state_ctrl.run_state = WAIT_COLOR_DISPLAY_DELAY_OVER;
@@ -213,12 +211,8 @@ void rgbRun(void){
                 memset(COLOR_ROW_DATA,0,sizeof(COLOR_ROW_DATA));
             }
         }break;
-        case RESET_ARRAY_FILL_START:{
-            ws_rgb.state_ctrl.run_state = WAIT_RESET_ARRAY_FILL;
-        }break;
-        case WAIT_RESET_ARRAY_FILL:{    
-            ws_rgb.state_ctrl.run_state = SEND_RESET_PWM;
-        }break;
+        case RESET_ARRAY_FILL_START:{ws_rgb.state_ctrl.run_state = WAIT_RESET_ARRAY_FILL;}
+        case WAIT_RESET_ARRAY_FILL:{ws_rgb.state_ctrl.run_state = SEND_RESET_PWM;}
         case SEND_RESET_PWM:{
             DMA_PWM_StartTransmitData(ws_rgb.select_rgb_ctrl.select_row,(uint32_t*)rgb_reset,sizeof(rgb_reset)/sizeof(uint16_t));
             ws_rgb.state_ctrl.pwm_state = PWM_BUSY; 
@@ -229,10 +223,8 @@ void rgbRun(void){
             if(ws_rgb.state_ctrl.dma_state == DMA_READY){
                 ws_rgb.state_ctrl.run_state = SEND_RESET_PWM_FINISH;
             }
-        }
-        case SEND_RESET_PWM_FINISH:{
-            ws_rgb.state_ctrl.run_state = RESET_DISPLAY_DELAY_START;
         }break;
+        case SEND_RESET_PWM_FINISH:{ws_rgb.state_ctrl.run_state = RESET_DISPLAY_DELAY_START;}
         case RESET_DISPLAY_DELAY_START:{
             if(RGB_Delay() == OK){
                 ws_rgb.state_ctrl.run_state = WAIT_RESET_DISPLAY_DELAY_OVER;
@@ -241,7 +233,7 @@ void rgbRun(void){
         case WAIT_RESET_DISPLAY_DELAY_OVER:{
             if(tim_inf.Tim->State == HAL_TIM_STATE_READY){
                 ws_rgb.state_ctrl.run_state = RGB_IDLE;
-                DMA_PWM_StopTransmitData(ws_rgb.select_rgb_ctrl.select_row);
+                 DMA_PWM_StopTransmitData(ws_rgb.select_rgb_ctrl.select_row);
                 ws_rgb.state_ctrl.pwm_state = PWM_READY;
             }
         }break;
@@ -434,6 +426,13 @@ inline void setRunState(RGB_RunState RunState){
 }
 
 //callback
+void Command_HandlingCallback(uint8_t command) {
+    setMode(command);
+    UART_Data_Transfer(DATA_TYPE_COMMAND,&command,1);
+}
+void Position_HandlingCallback(uint8_t position) {
+    setPosition(position);
+}
 void DMA_MEMTOMEN_CpltCallback(DMA_HandleTypeDef * hdma){
     if(DMA_MEMTOMEM->State == HAL_DMA_STATE_BUSY){
         HAL_DMA_Abort_IT(DMA_MEMTOMEM); //停止DMA

@@ -41,7 +41,7 @@ add_subdirectory(cmake/stm32cubemx)
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
         ${CMAKE_SOURCE_DIR}/User/ws2812b
-        ${CMAKE_SOURCE_DIR}/User/uart_slave
+        ${CMAKE_SOURCE_DIR}/User/uart_proto
         ${CMAKE_SOURCE_DIR}/User/random
         ${CMAKE_SOURCE_DIR}/User/tool
 )
@@ -53,7 +53,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/User/ws2812b/rgb_data.c
         ${CMAKE_SOURCE_DIR}/User/ws2812b/rgb_key.c
         ${CMAKE_SOURCE_DIR}/User/ws2812b/rgb_mode.c
-        ${CMAKE_SOURCE_DIR}/User/uart_slave/uart_slave.c
+        ${CMAKE_SOURCE_DIR}/User/uart_proto/uart_proto.c
         ${CMAKE_SOURCE_DIR}/User/random/random.c
         ${CMAKE_SOURCE_DIR}/User/tool/tool_lib.c
 )
@@ -62,7 +62,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
         ${CMAKE_SOURCE_DIR}/User/ws2812b
-        ${CMAKE_SOURCE_DIR}/User/uart_slave
+        ${CMAKE_SOURCE_DIR}/User/uart_proto
         ${CMAKE_SOURCE_DIR}/User/random
         ${CMAKE_SOURCE_DIR}/User/tool
 )

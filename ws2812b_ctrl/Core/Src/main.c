@@ -26,7 +26,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "uart_proto.h"
+#include "WS2812B.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -100,8 +101,8 @@ int main(void)
   RGB_Srand_Init();
   PA5_ADC_AIN_Init();
   WS2812_Init();
-  Uart_Init();
-  HAL_UARTEx_ReceiveToIdle_IT(uart_slave,TempBuffer,100);
+  UART_Manager_Init(&huart2);
+  HAL_UARTEx_ReceiveToIdle_IT(uart_manager.uart,uart_manager.temp_buffer,100);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -109,13 +110,14 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    rgbStart();
-    if(TempBuffer_Finish_Flag){
-      TempBuffer_Finish_Flag = 0;
-      BufMove(TempBuffer,TempBufferSize);
-    }
-    ReceiveBufferParse(setMode,setPosition);
+
     /* USER CODE BEGIN 3 */
+    rgbStart();
+    if(uart_manager.RE){
+      uart_manager.RE = 0;
+      BufMove(uart_manager.temp_buffer,uart_manager.temp_buffer_len);
+    }
+    ReceiveBufferParse(Command_HandlingCallback,Position_HandlingCallback);
   }
   /* USER CODE END 3 */
 }

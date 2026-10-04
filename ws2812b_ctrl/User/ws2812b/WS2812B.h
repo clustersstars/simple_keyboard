@@ -28,25 +28,10 @@ typedef enum{
     // PWM_FINISH
 }PWM_STATE;
 
-// typedef enum{
-//     MEM_DMA_IDLE = 0,
-//     MEM_DMA_READY_DATA,
-//     MEM_DMA_DATA_READY_FINISH,
-// }MEM_DMA_STATE;
-
 typedef enum{
     DMA_READY = (uint8_t)0,
     DMA_BUSY
-    // PWM_DMA_FINISH
 }DMA_STATE;
-
-// typedef enum{
-//     // BUFFER_ENABLE = (uint8_t)0,
-//     BUFFER_NOT_FILLED = (uint8_t)0,
-//     BUFFER_IS_FILLED,
-//     // BUFFER_COLOR_IS_COMPLETE, //颜色缓冲数据已完成
-//     // BUFFER_UNENABLE
-// }BUFFER_FILL_COLOR_STATE;
 
 typedef enum{
     RGB_IDLE = (uint8_t)0,
@@ -68,12 +53,10 @@ typedef enum{
 }RGB_RunState;
 
 typedef struct{
-    RGB_STATE               rgb_state;                   //rgb灯控的状态
-    RGB_RunState            run_state;
-    PWM_STATE               pwm_state;                   //pwm的状态
-    // MEM_DMA_STATE           mem_dma_state;               //dma的状态
-    // BUFFER_FILL_COLOR_STATE buffer_fill_state; //
-    DMA_STATE               dma_state;
+    volatile RGB_STATE               rgb_state;                   //rgb灯控的状态
+    volatile RGB_RunState            run_state;
+    volatile PWM_STATE               pwm_state;                   //pwm的状态
+    volatile DMA_STATE               dma_state;
 }StateCtrlTypeDef;
 
 typedef struct{
@@ -157,5 +140,9 @@ void DMA_PWM_StopTransmitData(uint8_t row);
 void RGB_Reset_SleepTime(void);
 void setMode(uint8_t mode);
 void setPosition(uint8_t position);
+void Command_HandlingCallback(uint8_t command);
+void Position_HandlingCallback(uint8_t position);
 
+
+extern RGB_InitTypeDef ws_rgb;
 #endif

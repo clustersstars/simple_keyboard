@@ -24,14 +24,18 @@ typedef struct{
 
 //创建一个环形数组
 typedef struct{
-    uint8_t list_size;//数组的大小
-    uint8_t head_pointer;//头位置
-    uint8_t current_pointer;//当前位置
+    uint8_t list_size;//数组的大小 //实际只能装list_size-1
+    volatile uint8_t list_read_pointer;
+    volatile uint8_t list_write_pointer;
+    volatile uint8_t list_read_temp_pointer;
+    // uint8_t head_pointer;//头位置
+    // uint8_t current_pointer;//当前位置
     uint8_t *ring_list;//数组指针
-    uint8_t list_num;//已存储数量
+
+    // uint8_t list_num;//已存储数量
 }RingList_InitTypeDef;
 
-//extern 
+//extern
 bool MarkList_Init(MarkList_InitTypeDef* mark_structure,uint8_t mark_size,uint8_t* mark_list);
 void MarkList_Add(MarkList_InitTypeDef* mark_structure,uint8_t elem);
 bool MarkList_IsExist(MarkList_InitTypeDef* mark_structure,uint8_t elem);
@@ -40,5 +44,9 @@ void MarkList_MarkClear(MarkList_InitTypeDef* mark_structure);
 bool RingList_Init(RingList_InitTypeDef* ring_structure,uint8_t list_size,uint8_t* list);
 bool RingList_Put(RingList_InitTypeDef* ring_structure,uint8_t element);
 int16_t RingList_Pop(RingList_InitTypeDef* ring_structure);
+void RingList_Update_TempReadPointer(RingList_InitTypeDef* ring_structure);
+void RingList_TraceBack_ReadPointer(RingList_InitTypeDef* ring_structure);
+bool RingList_IsFull(const RingList_InitTypeDef* ring_structure);
+bool RingList_IsEmpty(const RingList_InitTypeDef* ring_structure);
 void RingList_ListClear(RingList_InitTypeDef* ring_structure);
 #endif

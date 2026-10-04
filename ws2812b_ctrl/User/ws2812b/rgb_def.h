@@ -6,8 +6,10 @@
 #define RGB_COL_NUM 15
 
 //pwm_72MHZ
-#define CODE_0     25
-#define CODE_1     50
+//ARR = 89      
+//
+#define CODE_0     29
+#define CODE_1     58
 #define RESET_CODE 0
 
 #endif

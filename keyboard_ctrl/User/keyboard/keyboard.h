@@ -150,6 +150,8 @@
 #define KEYBOARDROW  6              //键盘行数
 #define KEYBOARDCOL  16             //键盘列数
 #define K_MAX_THRESHOLD 100         //按键相同次数(阈值)
+#define COMMAND_TIMEOUT 100         //100ms超时
+#define COMMAND_SEND_REPEAT_COUNT 3  //最多重发3次
 
 //键盘状态
 typedef enum{  
@@ -161,12 +163,6 @@ typedef enum{
 }Keyboard_State;
 
 typedef enum{
-  NO_EFFECT = (uint8_t)0,
-  PENDING_EFFECT,
-  EFFECT
-}EffectState;
-
-typedef enum{
     SWITCH_TYPE = (uint8_t)0,
     COLOR_TYPE,
     MODE_TYPE,
@@ -175,14 +171,14 @@ typedef enum{
 typedef struct{
   uint32_t    time;
   uint8_t     rgb_command;
-  EffectState effect_state;
   uint8_t     repeat_transmit_count;
 }RGB_Mode;
 
 typedef struct {
   uint8_t  pending_quantity;
-  uint8_t  last_time_command;
-  RGB_Mode rgb_mode[3];
+  uint8_t  temp_mode[3];
+  RGB_Mode wait_response_mode[3];
+  uint8_t  rgb_mode[3];
 }ModeManage;
 
 typedef struct{
@@ -207,8 +203,7 @@ typedef struct RewindBuffer_InitTypeDef{
 
 #ifdef KEYBOARD_RGB
 
-#define K_POSITION_LIST_SIZE 15     
-
+#define K_POSITION_LIST_SIZE 15
 //键盘按键位置缓冲
 typedef struct{
   uint8_t pos_top;
@@ -248,18 +243,20 @@ void keyboardStart(void); //开启键盘扫描
 uint8_t getKey(uint16_t GPIO_Pin);
  
 #ifdef KEYBOARD_RGB
-void setMode(uint8_t command);
-void resetMode(uint8_t command);
 void transmitCommand(void);
 void transmitPosition(void);
+void commandTimeoutHandler(void);
+void Command_HandlingCallback(uint8_t command);
+void Position_HandlingCallback(uint8_t position);
 #endif
 
+
 bool RewindBuf_Init(TypeManage *type_manage,RewindBuffer_InitTypeDef *rewindbuf);
-bool RewindBuf_Write(struct RewindBuffer_InitTypeDef *rewindbuf,uint8_t elem);
-int  RewindBuf_Read(struct RewindBuffer_InitTypeDef *rewindbuf);
-void RewindBuf_Rewind(struct RewindBuffer_InitTypeDef *rewindbuf);
-void RewindBuf_Clear(struct RewindBuffer_InitTypeDef *rewindbuf);
-bool RewindBuf_Is_Full(struct RewindBuffer_InitTypeDef *rewindbuf);
-bool RewindBuf_Is_Empty(struct RewindBuffer_InitTypeDef *rewindbuf);
+bool RewindBuf_Write(RewindBuffer_InitTypeDef *rewindbuf,uint8_t elem);
+int  RewindBuf_Read(RewindBuffer_InitTypeDef *rewindbuf);
+void RewindBuf_Rewind(RewindBuffer_InitTypeDef *rewindbuf);
+void RewindBuf_Clear(RewindBuffer_InitTypeDef *rewindbuf);
+bool RewindBuf_Is_Full(RewindBuffer_InitTypeDef *rewindbuf);
+bool RewindBuf_Is_Empty(RewindBuffer_InitTypeDef *rewindbuf);
 #endif
 

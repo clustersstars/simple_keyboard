@@ -25,7 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "keyboard.h"
+#include  "uart_proto.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,7 +58,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -92,8 +92,12 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USB_DEVICE_Init();
   MX_TIM4_Init();
+  UART_Manager_Init(&huart1);
   /* USER CODE BEGIN 2 */
-
+  KeyboardInit();
+  #ifdef KEYBOARD_RGB
+    HAL_UARTEx_ReceiveToIdle_IT(uart_manager.uart,uart_manager.temp_buffer,100);
+  #endif
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -101,7 +105,21 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    keyboardStart();
+    #ifdef KEYBOARD_RGB
+        //接受并处理命令
+        if(uart_manager.RE){
+          uart_manager.RE = 0;
+          BufMove(uart_manager.temp_buffer,uart_manager.temp_buffer_len);
+        }
+        ReceiveBufferParse(Command_HandlingCallback,Position_HandlingCallback);
+        //发送按键位置
+        transmitPosition();
+        //发送命令
+        transmitCommand();
+        //处理命令超时
+        commandTimeoutHandler();
+    #endif
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
