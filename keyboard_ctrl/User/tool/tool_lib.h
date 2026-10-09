@@ -18,21 +18,17 @@ typedef enum{
 
 //创建一个标记数组初始化
 typedef struct{
-    uint8_t mark_size;//标记数组大小
+    volatile uint8_t mark_size;//标记数组大小
     uint8_t *mark_list;//标记数组指针
 }MarkList_InitTypeDef;
 
 //创建一个环形数组
 typedef struct{
-    uint8_t list_size;//数组的大小 //实际只能装list_size-1
+    volatile uint8_t list_size;//数组的大小 //实际只能装list_size-1
     volatile uint8_t list_read_pointer;
     volatile uint8_t list_write_pointer;
     volatile uint8_t list_read_temp_pointer;
-    // uint8_t head_pointer;//头位置
-    // uint8_t current_pointer;//当前位置
     uint8_t *ring_list;//数组指针
-
-    // uint8_t list_num;//已存储数量
 }RingList_InitTypeDef;
 
 //extern

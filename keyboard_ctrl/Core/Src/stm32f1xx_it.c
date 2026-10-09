@@ -356,22 +356,14 @@ void EXTI15_10_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-  if(KeyboardState == KEYBOARD_IDLE){
-    KeyboardState = KEYBOARD_READY_SCAN;
-  }
-  if(KeyboardState == KEYBOARD_SCAN_RUNNING){
-    uint8_t col = getKey(GPIO_Pin);
-    //去除重复的中断
-    if(!MarkList_IsExist(type_manage.mark_list,col)){
-      MarkList_Add(type_manage.mark_list,col);
-      RewindBuf_Write(type_manage.rewindbuf,col);
-    }
+  if(keyboard_type_manage.KeyboardState == KEYBOARD_IDLE){//开启键盘扫描
+    keyboard_type_manage.KeyboardState = KEYBOARD_READY_SCAN;
   }
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
   //usb发送报文
   if(htim == keyboard_tim_1ms){
-    USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS,type_manage.report_manage->usb_report,NKRO_REPORT_BUFFER_SIZE);
+    USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS,keyboard_type_manage.report_manage->usb_report,NKRO_REPORT_BUFFER_SIZE);
   }
 }
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){

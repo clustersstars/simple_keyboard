@@ -1,9 +1,7 @@
 #ifndef KEYBOARD_H_
 #define KEYBOARD_H_
-#define KEYBOARD_RGB 
+#define KEYBOARD_RGB //默认有rgb从设备
 #include "stm32f1xx_hal.h"
-#include <stdlib.h>
-#include <stdio.h>
 #include "tool_lib.h"
 #include "nkro.h"
 
@@ -146,7 +144,6 @@
 #define RGB_COLOR_VIOLET           KB_V
 #define RGB_COLOR_BLUE             KB_B
 //
-//
 #define KEYBOARDROW  6              //键盘行数
 #define KEYBOARDCOL  16             //键盘列数
 #define K_MAX_THRESHOLD 100         //按键相同次数(阈值)
@@ -175,7 +172,7 @@ typedef struct{
 }RGB_Mode;
 
 typedef struct {
-  uint8_t  pending_quantity;
+  volatile uint8_t  pending_quantity;
   uint8_t  temp_mode[3];
   RGB_Mode wait_response_mode[3];
   uint8_t  rgb_mode[3];
@@ -195,14 +192,13 @@ typedef struct{
 }ReportManage;
 
 typedef struct RewindBuffer_InitTypeDef{
-  uint8_t  buffer_size;
-  uint8_t  read_pointer;
-  uint8_t  write_pointer;
+  volatile uint8_t  buffer_size;
+  volatile uint8_t  read_pointer;
+  volatile uint8_t  write_pointer;
   uint8_t* buffer;
 }RewindBuffer_InitTypeDef;
 
 #ifdef KEYBOARD_RGB
-
 #define K_POSITION_LIST_SIZE 15
 //键盘按键位置缓冲
 typedef struct{
@@ -215,27 +211,24 @@ typedef struct{
   PosList pos_list;
   RingList_InitTypeDef ring_structure;
 }PosManage;
-
 #endif
 
 typedef struct{
-  MarkList_InitTypeDef     *mark_list;
-  RewindBuffer_InitTypeDef *rewindbuf;
+  volatile Keyboard_State  KeyboardState;//键盘状态
+  volatile uint8_t         SCAN_ROW;//扫描行
+  volatile uint8_t         threshold;//按键稳定阈值
   //键盘发送
-  BufferManage *buffer_manage;
-  ReportManage *report_manage;
-  // //键盘按键缓冲
+  BufferManage             *buffer_manage;
+  ReportManage             *report_manage;
+  //键盘按键缓冲
   #ifdef KEYBOARD_RGB
-  //rgb模式管理
-  ModeManage *mode_manage;
-  //键盘按键位置存储
-  PosManage  *position_manage;
+  ModeManage               *mode_manage;//rgb模式管理
+  PosManage                *position_manage;//键盘按键位置存储
   #endif
-}TypeManage;
+}Keyboard_TypeManage;
 
-extern Keyboard_State KeyboardState;//键盘状态
 extern TIM_HandleTypeDef *keyboard_tim_1ms;     //键盘扫描频率1ms定时器
-extern TypeManage type_manage;
+extern Keyboard_TypeManage keyboard_type_manage;
 
 void KeyboardInit(void); //键盘初始化
 void setKeyboardRowPin(GPIO_PinState PinState);//对所有的行置位
@@ -250,13 +243,5 @@ void Command_HandlingCallback(uint8_t command);
 void Position_HandlingCallback(uint8_t position);
 #endif
 
-
-bool RewindBuf_Init(TypeManage *type_manage,RewindBuffer_InitTypeDef *rewindbuf);
-bool RewindBuf_Write(RewindBuffer_InitTypeDef *rewindbuf,uint8_t elem);
-int  RewindBuf_Read(RewindBuffer_InitTypeDef *rewindbuf);
-void RewindBuf_Rewind(RewindBuffer_InitTypeDef *rewindbuf);
-void RewindBuf_Clear(RewindBuffer_InitTypeDef *rewindbuf);
-bool RewindBuf_Is_Full(RewindBuffer_InitTypeDef *rewindbuf);
-bool RewindBuf_Is_Empty(RewindBuffer_InitTypeDef *rewindbuf);
 #endif
 
